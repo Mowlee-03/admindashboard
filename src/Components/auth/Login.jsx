@@ -40,24 +40,36 @@ const Login = ({ onLogin }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
-
+  
     setLoading(true); // Show loader
-
+  
     try {
       const response = await axios.post(LOGIN_ADMIN, formData);
+      console.log(response);
+  
       setSnackbar({ open: true, message: 'Login successful', severity: 'success' });
-      const token=response.data.authToken
-      const decodeToken=jwtDecode(token)
-      // console.log(decodeToken);
-      localStorage.setItem("user",JSON.stringify(decodeToken))
+      const token = response.data.authToken;
+      const decodeToken = jwtDecode(token);
+      localStorage.setItem("user", JSON.stringify(decodeToken));
       onLogin(decodeToken);
       navigate('/');
     } catch (error) {
-      setSnackbar({ open: true, message: error.response.data.message, severity: 'error' });
+      if (error.response) {
+        // Server responded with a status other than 2xx
+        const errorMessage = error.response.data?.message || 'An error occurred';
+        setSnackbar({ open: true, message: errorMessage, severity: 'error' });
+      } else if (error.request) {
+        // Request was made but no response received
+        setSnackbar({ open: true, message: 'No response from server', severity: 'error' });
+      } else {
+        // Something happened in setting up the request
+        setSnackbar({ open: true, message: 'Request setup error', severity: 'error' });
+      }
     } finally {
       setLoading(false); // Hide loader
     }
   };
+  
 
   const handleCloseSnackbar = () => {
     setSnackbar({ ...snackbar, open: false });
