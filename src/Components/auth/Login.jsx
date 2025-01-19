@@ -45,7 +45,6 @@ const Login = ({ onLogin }) => {
 
     try {
       const response = await axios.post(LOGIN_ADMIN, formData);
-      console.log(response);
       setSnackbar({ open: true, message: 'Login successful', severity: 'success' });
       const token=response.data.authToken
       const decodeToken=jwtDecode(token)
@@ -54,7 +53,6 @@ const Login = ({ onLogin }) => {
       onLogin(decodeToken);
       navigate('/');
     } catch (error) {
-      console.error("An error occurred during login:", error);
       setSnackbar({ open: true, message: error.response.data.message, severity: 'error' });
     } finally {
       setLoading(false); // Hide loader
