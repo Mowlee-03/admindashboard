@@ -1,27 +1,45 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom'; // to access the id from the URL
 import { MapPin, Bed, Bath, Square } from 'lucide-react';
+import axios from 'axios';
+import { CircularProgress } from '@mui/material'; // MUI CircularProgress
+import { PROPERTY, } from './auth/api'; // Adjust the import if necessary
 
-const ViewPost = ({ property }) => {
-  // Mock data for demonstration
-  const mockProperty = {
-    id: 1,
-    title: 'Modern Luxury Villa',
-    price: '$850,000',
-    location: '123 Main St, City, State',
-    description: 'Beautiful modern villa with stunning views and premium finishes throughout. Features include a gourmet kitchen, spacious living areas, and a private backyard.',
-    type: 'sale',
-    bedrooms: 4,
-    bathrooms: 3,
-    area: '2,500',
-    images: [
-      'https://images.unsplash.com/photo-1580587771525-78b9dba3b914',
-      'https://images.unsplash.com/photo-1576941089067-2de3c901e126',
-      'https://images.unsplash.com/photo-1583608205776-bfd35f0d9f83',
-    ],
-    
-  };
+const ViewPost = () => {
+  const { id } = useParams();  // Extracting id from URL params
+  const [property, setProperty] = useState(null);
+  const [loading, setLoading] = useState(true); // Loading state
+  const [error, setError] = useState(null); // Error state
 
-  const displayProperty = property || mockProperty;
+  useEffect(() => {
+    const fetchProperty = async () => {
+      try {
+        const response = await axios.get(PROPERTY(id)); // Fetch property by id
+        setProperty(response.data.data);
+      } catch (error) {
+        setError('Failed to load property data. Please try again later.');
+      } finally {
+        setLoading(false); // Set loading to false after fetching
+      }
+    };
+    fetchProperty();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <CircularProgress />
+      </div>
+    ); // Display loading indicator when property data is being fetched
+  }
+
+  if (error) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <p className="text-red-600 font-bold">{error}</p> {/* Show error message */}
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">
@@ -30,13 +48,13 @@ const ViewPost = ({ property }) => {
           <div>
             <div className="relative h-96">
               <img
-                src={displayProperty.images[0]}
-                alt={displayProperty.title}
+                src={property.images[0]}
+                alt={property.title}
                 className="absolute inset-0 w-full h-full object-cover rounded-lg"
               />
             </div>
             <div className="grid grid-cols-3 gap-2 mt-2">
-              {displayProperty.images.slice(1).map((image, index) => (
+              {property.images.slice(1).map((image, index) => (
                 <img
                   key={index}
                   src={image}
@@ -48,34 +66,34 @@ const ViewPost = ({ property }) => {
           </div>
 
           <div>
-            <h1 className="text-2xl font-bold mb-2">{displayProperty.title}</h1>
+            <h1 className="text-2xl font-bold mb-2">{property.title}</h1>
             <p className="text-3xl font-bold text-blue-600 mb-4">
-              {displayProperty.price}
+              {property.price}
             </p>
 
             <div className="flex items-center text-gray-600 mb-4">
               <MapPin size={20} className="mr-2" />
-              {displayProperty.location}
+              {property.location}
             </div>
 
             <div className="grid grid-cols-3 gap-4 mb-6">
               <div className="flex items-center">
                 <Bed size={20} className="mr-2 text-gray-600" />
-                <span>{displayProperty.bedrooms} Beds</span>
+                <span>{property.bedrooms} Beds</span>
               </div>
               <div className="flex items-center">
                 <Bath size={20} className="mr-2 text-gray-600" />
-                <span>{displayProperty.bathrooms} Baths</span>
+                <span>{property.bathrooms} Baths</span>
               </div>
               <div className="flex items-center">
                 <Square size={20} className="mr-2 text-gray-600" />
-                <span>{displayProperty.area} sqft</span>
+                <span>{property.area} sqft</span>
               </div>
             </div>
 
             <div>
               <h2 className="text-xl font-semibold mb-2">Description</h2>
-              <p className="text-gray-600">{displayProperty.description}</p>
+              <p className="text-gray-600">{property.description}</p>
             </div>
 
             <div className="mt-6">

@@ -8,11 +8,15 @@ import {
   Box,
   Paper,
   IconButton,
-  CircularProgress
+  CircularProgress,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import { Upload, X } from 'lucide-react';
 import firebaseApp from '../Firebase/Firebase';
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage"
+import axios from 'axios';
+import { POST_PROPERTY } from './auth/api';
 
 const PostProperty = () => {
   const fileInputRef = useRef(null);
@@ -35,34 +39,38 @@ const PostProperty = () => {
   const [errors, setErrors] = useState({});
   const storage = getStorage(firebaseApp);
 
+  // Snackbar state
+  const [openSnackbar, setOpenSnackbar] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [snackbarSeverity, setSnackbarSeverity] = useState('success'); // 'success' or 'error'
 
-const validate = () => {
-  let tempErrors = {};
-  if (!formData.title) tempErrors.title = 'Title is required';
-  if (!formData.price) tempErrors.price = 'Price is required';
-  if (!formData.location) tempErrors.location = 'Location is required';
-  if (!formData.description) tempErrors.description = 'Description is required';
-  if (!formData.bedrooms) tempErrors.bedrooms = 'Number of bedrooms is required';
-  if (!formData.bathrooms) tempErrors.bathrooms = 'Number of bathrooms is required';
-  if (!formData.category) tempErrors.category = 'Category is required';
-  if (!formData.district) tempErrors.district = 'District is required';
-  if (!formData.area) tempErrors.area = 'Area is required'; 
-  if (images.length === 0) tempErrors.images = 'At least one image is required';
-  
-  setErrors(tempErrors);
-  return Object.keys(tempErrors).length === 0;
-};
+  const validate = () => {
+    let tempErrors = {};
+    if (!formData.title) tempErrors.title = 'Title is required';
+    if (!formData.price) tempErrors.price = 'Price is required';
+    if (!formData.location) tempErrors.location = 'Location is required';
+    if (!formData.description) tempErrors.description = 'Description is required';
+    if (formData.bedrooms === '' || formData.bedrooms < 0) tempErrors.bedrooms = 'Number of bedrooms is required';
+    if (formData.bathrooms === '' || formData.bathrooms < 0) tempErrors.bathrooms = 'Number of bathrooms is required';
+    if (!formData.category) tempErrors.category = 'Category is required';
+    if (!formData.district) tempErrors.district = 'District is required';
+    if (!formData.area) tempErrors.area = 'Area is required'; 
+    if (images.length === 0) tempErrors.images = 'At least one image is required';
+    
+    setErrors(tempErrors);
+    return Object.keys(tempErrors).length === 0;
+  };
 
   const handleImageChange = async (event) => {
     const files = event.target.files;
     const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif'];
     const maxFileSize = 10 * 1024 * 1024; // 10MB
-  
+    
     if (files) {
       setIsUploading(true);
       let validFiles = [];
       let errors = [];
-  
+
       Array.from(files).forEach((file) => {
         if (!validTypes.includes(file.type)) {
           errors.push(`${file.name} is not a valid file type.`);
@@ -72,7 +80,7 @@ const validate = () => {
           validFiles.push(file);
         }
       });
-  
+
       if (errors.length > 0) {
         setErrors((prevErrors) => ({
           ...prevErrors,
@@ -86,10 +94,10 @@ const validate = () => {
           images: '',
         }));
       }
-  
+
       const totalFiles = validFiles.length;
       let completedUploads = 0;
-  
+
       const uploadPromises = validFiles.map(async (file) => {
         const storageRef = ref(storage, `images/${file.name}`);
         await uploadBytes(storageRef, file);
@@ -97,7 +105,7 @@ const validate = () => {
         setUploadProgress((completedUploads / totalFiles) * 100);
         return getDownloadURL(storageRef);
       });
-  
+
       try {
         const uploadedImageUrls = await Promise.all(uploadPromises);
         setImages((prevImages) => [...prevImages, ...uploadedImageUrls]);
@@ -109,7 +117,6 @@ const validate = () => {
       }
     }
   };
-  
 
   const handleImageDelete = (index) => {
     setImages((prevImages) => prevImages.filter((_, i) => i !== index));
@@ -119,10 +126,42 @@ const validate = () => {
     fileInputRef.current.click();
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+  
     if (validate()) {
-      console.log({ ...formData, images });
+      try {
+        const post = await axios.post(POST_PROPERTY, {
+          ...formData,
+          images,
+        });
+  
+        // Display success Snackbar
+        setSnackbarMessage('Property posted successfully!');
+        setSnackbarSeverity('success');
+        setOpenSnackbar(true);
+  
+        // Reset the form data
+        setFormData({
+          title: '',
+          price: '',
+          location: '',
+          description: '',
+          type: 'sale',
+          bedrooms: '',
+          bathrooms: '',
+          area: '',
+          category: '',
+          district: '',
+        });
+        setImages([]); // Clear images
+  
+      } catch (error) {
+        // Display error Snackbar
+        setSnackbarMessage('Error posting property. Please try again.');
+        setSnackbarSeverity('error');
+        setOpenSnackbar(true);
+      }
     }
   };
 
@@ -192,12 +231,14 @@ const validate = () => {
             <Grid item xs={12} md={6}>
             <TextField
               label="Area (sq feet)"
-              type="number"
               fullWidth
-              value={formData.area === 0 ? '' : formData.area}
+              value={formData.area}
               onChange={(e) => {
-                const newValue = e.target.value === '' ? 0 : Math.max(0, parseFloat(e.target.value) || 0);
-                setFormData({ ...formData, area: newValue });
+                // Only allow numbers and empty input
+                const value = e.target.value;
+                if (/^\d*$/.test(value)) {  // Allow only digits
+                  setFormData({ ...formData, area: value }); // Store as string
+                }
               }}
               error={!!errors.area}
               helperText={errors.area}
@@ -216,32 +257,32 @@ const validate = () => {
               </TextField>
             </Grid>
             <Grid item xs={12} md={6}>
-              <TextField
-                label="Bedrooms"
-                type="number"
-                fullWidth
-                value={formData.bedrooms}
-                onChange={(e) => {
-                  const newValue = Math.max(0, e.target.value);
-                  setFormData({ ...formData, bedrooms: newValue });
-                }}
-                error={!!errors.bedrooms}
-                helperText={errors.bedrooms}
-              />
+            <TextField
+              label="Bedrooms"
+              type="number"
+              fullWidth
+              value={formData.bedrooms !== '' ? formData.bedrooms : 0}  // Default to 0 if empty
+              onChange={(e) => {
+                const newValue = e.target.value === '' ? 0 : Math.max(0, e.target.value);
+                setFormData({ ...formData, bedrooms: newValue });
+              }}
+              error={!!errors.bedrooms}
+              helperText={errors.bedrooms}
+            />
             </Grid>
             <Grid item xs={12} md={6}>
-              <TextField
-                label="Bathrooms"
-                type="number"
-                fullWidth
-                value={formData.bathrooms}
-                onChange={(e) => {
-                  const newValue = Math.max(0, e.target.value);
-                  setFormData({ ...formData, bathrooms: newValue });
-                }}
-                error={!!errors.bathrooms}
-                helperText={errors.bathrooms}
-              />
+            <TextField
+              label="Bathrooms"
+              type="number"
+              fullWidth
+              value={formData.bathrooms !== '' ? formData.bathrooms : 0}  // Default to 0 if empty
+              onChange={(e) => {
+                const newValue = e.target.value === '' ? 0 : Math.max(0, e.target.value);
+                setFormData({ ...formData, bathrooms: newValue });
+              }}
+              error={!!errors.bathrooms}
+              helperText={errors.bathrooms}
+            />
             </Grid>
             <Grid item xs={12}>
               <TextField
@@ -352,6 +393,21 @@ const validate = () => {
           </Grid>
         </form>
       </Paper>
+
+      {/* Snackbar for success/error messages */}
+      <Snackbar
+        open={openSnackbar}
+        autoHideDuration={6000}
+        onClose={() => setOpenSnackbar(false)}
+        anchorOrigin={{
+          vertical: 'top',
+          horizontal: 'center',
+        }}
+      >
+        <Alert onClose={() => setOpenSnackbar(false)} severity={snackbarSeverity} sx={{ width: '100%' }}>
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

@@ -7,3 +7,6 @@ export const LOGIN_ADMIN=`${BASE_URL}api/admin/login`
 export const POST_PROPERTY=`${BASE_URL}api/property/post`
 export const VIEW_ALL_PROPERTY=`${BASE_URL}api/property/viewallproperties`
 export const PROPERTY = (propertyId) => `${BASE_URL}api/property/${propertyId}`
+
+
+export const USERS_DATA=`${BASE_URL}api/admin/users`
