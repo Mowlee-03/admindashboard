@@ -70,7 +70,7 @@ const PostProperty = () => {
       setIsUploading(true);
       let validFiles = [];
       let errors = [];
-
+  
       Array.from(files).forEach((file) => {
         if (!validTypes.includes(file.type)) {
           errors.push(`${file.name} is not a valid file type.`);
@@ -80,13 +80,18 @@ const PostProperty = () => {
           validFiles.push(file);
         }
       });
-
+  
       if (errors.length > 0) {
         setErrors((prevErrors) => ({
           ...prevErrors,
           images: errors.join(' '),
         }));
         setIsUploading(false);
+        
+        // Display error via Snackbar
+        setSnackbarMessage(errors.join(' '));
+        setSnackbarSeverity('error');
+        setOpenSnackbar(true);
         return;
       } else {
         setErrors((prevErrors) => ({
@@ -94,10 +99,10 @@ const PostProperty = () => {
           images: '',
         }));
       }
-
+  
       const totalFiles = validFiles.length;
       let completedUploads = 0;
-
+  
       const uploadPromises = validFiles.map(async (file) => {
         const storageRef = ref(storage, `images/${file.name}`);
         await uploadBytes(storageRef, file);
@@ -105,12 +110,15 @@ const PostProperty = () => {
         setUploadProgress((completedUploads / totalFiles) * 100);
         return getDownloadURL(storageRef);
       });
-
+  
       try {
         const uploadedImageUrls = await Promise.all(uploadPromises);
         setImages((prevImages) => [...prevImages, ...uploadedImageUrls]);
       } catch (error) {
-        console.error("Error uploading images: ", error);
+        // Display error via Snackbar
+        setSnackbarMessage('Error uploading images. Please try again.');
+        setSnackbarSeverity('error');
+        setOpenSnackbar(true);
       } finally {
         setIsUploading(false);
         setUploadProgress(0);
