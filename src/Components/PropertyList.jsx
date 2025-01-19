@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Bed, Bath, Square, Search, Filter } from 'lucide-react';
+import { MapPin, Bed, Bath, Square, Search, Filter, XCircle } from 'lucide-react'; 
+import axios from 'axios';
+import { CircularProgress } from '@mui/material'; // Import CircularProgress for the loader
+import { VIEW_ALL_PROPERTY } from './auth/api';
 
 const PropertyList = () => {
   const navigate = useNavigate();
@@ -12,46 +15,26 @@ const PropertyList = () => {
   });
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [properties, setProperties] = useState([]);
+  const [loading, setLoading] = useState(false); // Loading state
+  const [error, setError] = useState(null); // Error state
 
-  // Mock data for demonstration
-  const properties = [
-    {
-      id: 1,
-      title: 'Modern Luxury Villa',
-      price: 850000,
-      location: '123 Main St, City, State',
-      bedrooms: 4,
-      bathrooms: 3,
-      area: '2,500',
-      image: 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914',
-      type: 'sale',
-      category: 'villa',
-    },
-    {
-      id: 2,
-      title: 'Cozy Downtown Apartment',
-      price: 2500,
-      location: '456 Park Ave, City, State',
-      bedrooms: 2,
-      bathrooms: 2,
-      area: '1,200',
-      image: 'https://images.unsplash.com/photo-1576941089067-2de3c901e126',
-      type: 'rent',
-      category: 'apartment',
-    },
-    {
-      id: 3,
-      title: 'Seaside Family Home',
-      price: 1200000,
-      location: '789 Beach Rd, Coast City',
-      bedrooms: 5,
-      bathrooms: 4,
-      area: '3,500',
-      image: 'https://images.unsplash.com/photo-1583608205776-bfd35f0d9f83',
-      type: 'sale',
-      category: 'house',
-    },
-  ];
+  useEffect(() => {
+    const fetchProperties = async () => {
+      setLoading(true); // Start loading
+      setError(null); // Reset error
+      try {
+        const response = await axios.get(VIEW_ALL_PROPERTY);
+        setProperties(response.data.data);
+      } catch (error) {
+        setError('Failed to fetch properties. Please check your internet connection.');
+      } finally {
+        setLoading(false); // Stop loading
+      }
+    };
+
+    fetchProperties();
+  }, []);
 
   const filteredProperties = properties.filter(property => {
     const matchesSearch = property.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -72,6 +55,16 @@ const PropertyList = () => {
 
     return matchesSearch && matchesType && matchesBedrooms && matchesCategory && matchesPriceRange;
   });
+
+  // Function to reset filters
+  const clearFilters = () => {
+    setFilters({
+      type: 'all',
+      priceRange: 'all',
+      bedrooms: 'all',
+      category: 'all',
+    });
+  };
 
   return (
     <div className="p-6">
@@ -107,7 +100,7 @@ const PropertyList = () => {
         </div>
 
         {showFilters && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-4 bg-white rounded-md shadow-md">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 p-4 bg-white rounded-md shadow-md">
             <select
               className="rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500"
               value={filters.type}
@@ -153,61 +146,76 @@ const PropertyList = () => {
               <option value="villa">Villa</option>
               <option value="condo">Condo</option>
             </select>
+            <button
+              onClick={clearFilters}
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+            >
+              <XCircle size={20} />
+              Clear Filters
+            </button>
           </div>
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredProperties.map((property) => (
-          <div
-            key={property.id}
-            className="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer transform transition-transform hover:scale-[1.02]"
-            onClick={() => navigate(`/posts/${property.id}`)}
-          >
-            <div className="relative h-48">
-              <img
-                src={property.image}
-                alt={property.title}
-                className="w-full h-full object-cover"
-              />
-              <span className={`absolute top-2 right-2 px-2 py-1 rounded text-xs font-semibold ${
-                property.type === 'sale' ? 'bg-green-500 text-white' : 'bg-blue-500 text-white'
-              }`}>
-                For {property.type === 'sale' ? 'Sale' : 'Rent'}
-              </span>
-            </div>
-
-            <div className="p-4">
-              <h2 className="text-xl font-semibold mb-2 truncate">{property.title}</h2>
-              <p className="text-lg font-bold text-blue-600 mb-2">
-                {property.type === 'sale' 
-                  ? `$${property.price.toLocaleString()}`
-                  : `$${property.price.toLocaleString()}/month`}
-              </p>
-              
-              <div className="flex items-center text-gray-600 mb-3">
-                <MapPin size={16} className="mr-1" />
-                <p className="text-sm truncate">{property.location}</p>
+      {loading ? (
+        <div className="flex justify-center">
+          <CircularProgress />
+        </div>
+      ) : error ? (
+        <div className="text-red-500 text-center">{error}</div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredProperties.map((property) => (
+            <div
+              key={property.id}
+              className="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer transform transition-transform hover:scale-[1.02]"
+              onClick={() => navigate(`/properties/${property.id}`)}
+            >
+              <div className="relative h-48">
+                <img
+                  src={property.images[0]}
+                  alt={property.title}
+                  className="w-full h-full object-cover"
+                />
+                <span className={`absolute top-2 right-2 px-2 py-1 rounded text-xs font-semibold ${
+                  property.type === 'sale' ? 'bg-green-500 text-white' : 'bg-blue-500 text-white'
+                }`}>
+                  For {property.type === 'sale' ? 'Sale' : 'Rent'}
+                </span>
               </div>
 
-              <div className="grid grid-cols-3 gap-2 text-gray-600">
-                <div className="flex items-center">
-                  <Bed size={16} className="mr-1" />
-                  <span className="text-sm">{property.bedrooms}</span>
+              <div className="p-4">
+                <h2 className="text-xl font-semibold mb-2 truncate">{property.title}</h2>
+                <p className="text-lg font-bold text-blue-600 mb-2">
+                  {property.type === 'sale' 
+                    ? `$${property.price.toLocaleString()}`
+                    : `$${property.price.toLocaleString()}/month`}
+                </p>
+
+                <div className="flex items-center text-gray-600 mb-3">
+                  <MapPin size={16} className="mr-1" />
+                  <p className="text-sm truncate">{property.location}</p>
                 </div>
-                <div className="flex items-center">
-                  <Bath size={16} className="mr-1" />
-                  <span className="text-sm">{property.bathrooms}</span>
-                </div>
-                <div className="flex items-center">
-                  <Square size={16} className="mr-1" />
-                  <span className="text-sm">{property.area} sqft</span>
+
+                <div className="grid grid-cols-3 gap-2 text-gray-600">
+                  <div className="flex items-center">
+                    <Bed size={16} className="mr-1" />
+                    <span className="text-sm">{property.bedrooms}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <Bath size={16} className="mr-1" />
+                    <span className="text-sm">{property.bathrooms}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <Square size={16} className="mr-1" />
+                    <span className="text-sm">{property.area} sqft</span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

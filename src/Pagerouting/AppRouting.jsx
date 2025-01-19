@@ -4,28 +4,76 @@ import Dashboard from '../Components/Dashboard';
 import PostProperty from '../Components/PostProperty';
 import ViewPost from '../Components/ViewPost';
 import Users from '../Components/Users';
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import PropertyList from '../Components/PropertyList';
-
+import ProtectedRoute from './ProtectedRoute';
+import Login from '../Components/auth/Login';
 
 const AppRouting = () => {
-    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [user, setUser] = useState(() => {
+    const savedUser = localStorage.getItem('user');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+  
 
+  const handleLogin = (userData) => {
+    setUser(userData);
+  };
   return (
     <>
     <BrowserRouter>
-      <div className="min-h-screen bg-gray-100">
-        <Sidebar isOpen={isSidebarOpen} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
+    <div className="min-h-screen bg-gray-100">
+        {user && (
+          <>
+            <Sidebar isOpen={isSidebarOpen} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
+            {/* Overlay for mobile */}
+            <div
+              className={`fixed inset-0 bg-gray-600 bg-opacity-50 transition-opacity lg:hidden ${
+                isSidebarOpen ? 'opacity-100 z-30' : 'opacity-0 pointer-events-none'
+              }`}
+              onClick={() => setIsSidebarOpen(false)}
+            />
+          </>
+        )}
         
-        <div className={`lg:ml-64 transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
+        <main className={`transition-all duration-300 ${user ? 'lg:ml-64' : ''}`}>
           <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/posts" element={<PostProperty />} />
-            <Route path="/properties" element={<PropertyList />} />
-            <Route path="/properties/:id" element={<ViewPost />} />
-            <Route path="/users" element={<Users />} />
+            <Route path="/login" element={user ? <Navigate to="/" /> : <Login onLogin={handleLogin} />} />
+            
+            <Route path="/" element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/posts" element={
+              <ProtectedRoute>
+                <PostProperty />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/properties" element={
+              <ProtectedRoute>
+                <PropertyList />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/properties/:id" element={
+              <ProtectedRoute>
+                <ViewPost />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/users" element={
+              <ProtectedRoute>
+                <Users />
+              </ProtectedRoute>
+            } />
+
+            <Route path="*" element={<Navigate to={user ? "/" : "/login"} />} />
           </Routes>
-        </div>
+        </main>
       </div>
     </BrowserRouter>
     </>
