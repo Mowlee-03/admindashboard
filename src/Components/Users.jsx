@@ -51,7 +51,7 @@ const Users = () => {
   };
 
   const locationLink = selectedCoordinates.latitude && selectedCoordinates.longitude
-    ? `https://www.google.com/maps/embed/v1/place?key=AIzaSyCJIxs65no49mgT-ghvWADzXNq5JZyd6qA&q=${selectedCoordinates.latitude},${selectedCoordinates.longitude}`
+    ? `https://www.google.com/maps/embed/v1/place?key==${selectedCoordinates.latitude},${selectedCoordinates.longitude}`
     : '';
 
   return (
